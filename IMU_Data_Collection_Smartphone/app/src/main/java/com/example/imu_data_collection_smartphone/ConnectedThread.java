@@ -6,6 +6,8 @@ import android.os.Handler;
 import android.os.Message;
 import android.util.Log;
 
+import com.jjoe64.graphview.series.DataPoint;
+
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -19,9 +21,13 @@ public class ConnectedThread extends Thread {
     private final InputStream mmInStream;
     private final OutputStream mmOutStream;
     private byte[] mmBuffer; // mmBuffer store for the stream
+    private AccListener accListener;
+    private GyroListener gyroListener;
 
-    public ConnectedThread(BluetoothSocket socket) {
+    public ConnectedThread(BluetoothSocket socket, AccListener accListener, GyroListener gyroListener) {
         mmSocket = socket;
+        this.accListener = accListener;
+        this.gyroListener = gyroListener;
         InputStream tmpIn = null;
         OutputStream tmpOut = null;
 
@@ -60,6 +66,11 @@ public class ConnectedThread extends Thread {
                         + " x: " + sensorData[0]
                         + " y: " + sensorData[1]
                         + " z: " + sensorData[2]);
+                if (sensorData[4] == MainActivity.GYRO) {
+                    gyroListener.gyroListener(sensorData);
+                } else if (sensorData[4] == MainActivity.ACC) {
+                    accListener.accListener(sensorData);
+                }
             } catch (IOException e) {
                 Log.d(TAG, "Input stream was disconnected", e);
                 break;
@@ -98,10 +109,4 @@ public class ConnectedThread extends Thread {
         }
     }
 
-    public static Object deserialize(byte[] data)
-            throws IOException, ClassNotFoundException {
-        ByteArrayInputStream in = new ByteArrayInputStream(data);
-        ObjectInputStream is = new ObjectInputStream(in);
-        return is.readObject();
-    }
 }

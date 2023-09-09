@@ -16,17 +16,25 @@ import android.os.Bundle;
 import android.util.Log;
 
 
+import com.jjoe64.graphview.GraphView;
+import com.jjoe64.graphview.GridLabelRenderer;
+import com.jjoe64.graphview.Viewport;
+import com.jjoe64.graphview.series.DataPoint;
+import com.jjoe64.graphview.series.LineGraphSeries;
+
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
 
-public class MainActivity extends Activity {
+
+public class MainActivity extends Activity implements AccListener, GyroListener {
     final private String TAG = MainActivity.class.getName();
     final static private String ACC_UUID = "680ac785-9ed1-42cd-bdf0-76cf6b708f3b";
     final static private String GYRO_UUID = "e0740e55-4d73-4e97-b0fb-90afc0ebb980";
     final static private int REQUEST_ENABLE_BT = 0;
     private BluetoothAdapter bluetoothAdapter;
+    final private static int MOTION_PREVIEW_SIZE = 1000;
 
     // colors to display for graphs on the screen
     final private int graphColor[] = {
@@ -35,14 +43,49 @@ public class MainActivity extends Activity {
             Color.argb(255, 129, 209, 24), // green
             Color.argb(255, 225, 225, 0), // yellow
             Color.argb(255, 150, 150, 150)};
-//    private ArrayList<LineGraphSeries<DataPoint>> acc_display_buf = new ArrayList<>();
-//    private ArrayList<LineGraphSeries<DataPoint>> gyro_display_buf = new ArrayList<>();
+
+    private static ArrayList<LineGraphSeries<DataPoint>> accDisplayBuf = new ArrayList<>();
+    private static ArrayList<ArrayList<DataPoint>> accResultBuf = new ArrayList<>();
+    private static ArrayList<LineGraphSeries<DataPoint>> gyroDisplayBuf = new ArrayList<>();
+    private static ArrayList<ArrayList<DataPoint>> gyroResultBuf = new ArrayList<>();
+    private GraphView accGraph, gyroGraph;
+
+    private void initUI() {
+        Viewport vp1 = accGraph.getViewport();
+        vp1.setXAxisBoundsManual(true);
+        vp1.setMinX(0);
+        vp1.setMaxX(1000);
+
+        Viewport vp2 = gyroGraph.getViewport();
+        vp2.setXAxisBoundsManual(true);
+        vp2.setMinX(0);
+        vp2.setMaxX(1000);
+
+        for (int i = 0; i < 3; i++) {
+            accDisplayBuf.add(new LineGraphSeries<>());
+            accGraph.addSeries(accDisplayBuf.get(i));
+            accResultBuf.add(new ArrayList<>());
+            accDisplayBuf.get(i).setColor(graphColor[i]);
+            accDisplayBuf.get(i).setThickness(10);
+
+            gyroDisplayBuf.add(new LineGraphSeries<>());
+            gyroGraph.addSeries(gyroDisplayBuf.get(i));
+            gyroResultBuf.add(new ArrayList<>());
+            gyroDisplayBuf.get(i).setColor(graphColor[i]);
+            gyroDisplayBuf.get(i).setThickness(10);
+        }
+    }
 
     @TargetApi(Build.VERSION_CODES.S)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+
+        accGraph = findViewById(R.id.acc_graph);
+        gyroGraph = findViewById(R.id.gyro_graph);
+        initUI();
+
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (bluetoothAdapter == null) {
             Log.d(TAG, "onCreate: This device doesn't have bluetooth");
@@ -85,7 +128,47 @@ public class MainActivity extends Activity {
         acceptThread.start();
     }
 
+    private static final int X = 0, Y = 1, Z = 2, TIMESTAMP = 3, NAME = 4, INDEX = 5;
+    public static final float GYRO = 0.f, ACC = 1.f;
+
     private ConnectedThread accConnectedThread, gyroConnectedThread;
+
+    final private static Object accViewLock = new Object();
+    final private static Object gyroViewLock = new Object();
+    @Override
+    public void accListener(float[] sensorData) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                DataPoint x, y, z;
+                x = new DataPoint(sensorData[INDEX] / 2, sensorData[X]);
+                y = new DataPoint(sensorData[INDEX] / 2, sensorData[Y]);
+                z = new DataPoint(sensorData[INDEX] / 2, sensorData[Z]);
+
+                accDisplayBuf.get(0).appendData(x, true, MOTION_PREVIEW_SIZE);
+                accDisplayBuf.get(1).appendData(y, true, MOTION_PREVIEW_SIZE);
+                accDisplayBuf.get(2).appendData(z, true, MOTION_PREVIEW_SIZE);
+            }
+        });
+    }
+
+    @Override
+    public void gyroListener(float[] sensorData) {
+        runOnUiThread(new Runnable() {
+            @Override
+            public void run() {
+                DataPoint x, y, z;
+                x = new DataPoint(sensorData[INDEX] / 2, sensorData[X]);
+                y = new DataPoint(sensorData[INDEX] / 2, sensorData[Y]);
+                z = new DataPoint(sensorData[INDEX] / 2, sensorData[Z]);
+
+                gyroDisplayBuf.get(0).appendData(x, true, MOTION_PREVIEW_SIZE);
+                gyroDisplayBuf.get(1).appendData(y, true, MOTION_PREVIEW_SIZE);
+                gyroDisplayBuf.get(2).appendData(z, true, MOTION_PREVIEW_SIZE);
+            }
+        });
+    }
+
     private class AcceptThread extends Thread {
         private final BluetoothServerSocket accServerSocket, gyroServerSocket;
 
@@ -127,7 +210,8 @@ public class MainActivity extends Activity {
                     // the connection in a separate thread.
                     Log.d(TAG, "run: bluetooth acc connected SUCCESSFULLY!");
 //                    manageMyConnectedSocket(socket);
-                    accConnectedThread = new ConnectedThread(accSocket);
+                    accConnectedThread = new ConnectedThread(accSocket, MainActivity.this,
+                            MainActivity.this);
                     accConnectedThread.start();
                     try {
                         accServerSocket.close();
@@ -138,7 +222,8 @@ public class MainActivity extends Activity {
                 }
                 if (gyroSocket != null && !gyroConnected) {
                     Log.d(TAG, "run: bluetooth gyroconnected SUCCESSFULLY!");
-                    gyroConnectedThread = new ConnectedThread(gyroSocket);
+                    gyroConnectedThread = new ConnectedThread(gyroSocket, MainActivity.this,
+                            MainActivity.this);
                     gyroConnectedThread.start();
                     try {
                         gyroServerSocket.close();
