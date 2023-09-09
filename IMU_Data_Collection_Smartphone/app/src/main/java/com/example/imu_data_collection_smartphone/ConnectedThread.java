@@ -53,9 +53,10 @@ public class ConnectedThread extends Thread {
                 // Read from the InputStream.
                 numBytes = mmInStream.read(mmBuffer);
                 float[] sensorData = byteArrayToFloatArray(mmBuffer);
-//                Object sensorData = (Object) deserialize(mmBuffer);
                 Log.d(TAG, "run: Receive updated sensor data:"
-                        + " name: " + sensorData[3]
+                        + " index: " + sensorData[5]
+                        + " name: " + sensorData[4]
+                        + " timestamp: " + sensorData[3]
                         + " x: " + sensorData[0]
                         + " y: " + sensorData[1]
                         + " z: " + sensorData[2]);

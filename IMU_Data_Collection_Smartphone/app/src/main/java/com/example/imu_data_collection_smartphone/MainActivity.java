@@ -25,7 +25,8 @@ import java.util.UUID;
 
 public class MainActivity extends AppCompatActivity {
     final private String TAG = MainActivity.class.getName();
-    final static private String MY_UUID = "680ac785-9ed1-42cd-bdf0-76cf6b708f3b";
+    final static private String ACC_UUID = "680ac785-9ed1-42cd-bdf0-76cf6b708f3b";
+    final static private String GYRO_UUID = "e0740e55-4d73-4e97-b0fb-90afc0ebb980";
     final static private int REQUEST_ENABLE_BT = 0;
     private BluetoothAdapter bluetoothAdapter;
 
@@ -87,59 +88,77 @@ public class MainActivity extends AppCompatActivity {
         acceptThread.start();
     }
 
-    private ConnectedThread connectedThread;
+    private ConnectedThread accConnectedThread, gyroConnectedThread;
     private class AcceptThread extends Thread {
-        private final BluetoothServerSocket mmServerSocket;
+        private final BluetoothServerSocket accServerSocket, gyroServerSocket;
 
         @SuppressLint("MissingPermission")
         public AcceptThread() {
             // Use a temporary object that is later assigned to mmServerSocket
             // because mmServerSocket is final.
-            BluetoothServerSocket tmp = null;
+            BluetoothServerSocket tmp1 = null, tmp2 = null;
             try {
                 // MY_UUID is the app's UUID string, also used by the client code.
-                tmp = bluetoothAdapter.listenUsingRfcommWithServiceRecord("IMU_Data_Collection"
-                        , UUID.fromString(MY_UUID));
+                tmp1 = bluetoothAdapter.listenUsingRfcommWithServiceRecord("IMU_Data_Collection"
+                        , UUID.fromString(ACC_UUID));
+                tmp2 = bluetoothAdapter.listenUsingRfcommWithServiceRecord("IMU_Data_Collection"
+                        , UUID.fromString(GYRO_UUID));
             } catch (IOException e) {
                 Log.e(TAG, "Socket's listen() method failed", e);
             }
-            mmServerSocket = tmp;
+            accServerSocket = tmp1;
+            gyroServerSocket = tmp2;
         }
 
+        boolean accConnected = false, gyroConnected = false;
         @Override
         public void run() {
-            BluetoothSocket socket = null;
+            BluetoothSocket accSocket = null, gyroSocket = null;
             Log.d(TAG, "run: trying to connect...");
             // Keep listening until exception occurs or a socket is returned.
             while (true) {
                 try {
-                    socket = mmServerSocket.accept();
+                    accSocket = accServerSocket.accept();
+                    gyroSocket = gyroServerSocket.accept();
                 } catch (IOException e) {
                     Log.e(TAG, "Socket's accept() method failed", e);
                     break;
                 }
 
-                if (socket != null) {
+                if (accSocket != null && !accConnected) {
                     // A connection was accepted. Perform work associated with
                     // the connection in a separate thread.
-                    Log.d(TAG, "run: bluetooth connected SUCCESSFULLY!");
+                    Log.d(TAG, "run: bluetooth acc connected SUCCESSFULLY!");
 //                    manageMyConnectedSocket(socket);
-                    connectedThread = new ConnectedThread(socket);
-                    connectedThread.start();
+                    accConnectedThread = new ConnectedThread(accSocket);
+                    accConnectedThread.start();
                     try {
-                        mmServerSocket.close();
+                        accServerSocket.close();
                     } catch (IOException e) {
                         e.printStackTrace();
                     }
-                    break;
+                    accConnected = true;
                 }
+                if (gyroSocket != null && !gyroConnected) {
+                    Log.d(TAG, "run: bluetooth gyroconnected SUCCESSFULLY!");
+                    gyroConnectedThread = new ConnectedThread(gyroSocket);
+                    gyroConnectedThread.start();
+                    try {
+                        gyroServerSocket.close();
+                    } catch (IOException e) {
+                        e.printStackTrace();
+                    }
+                    gyroConnected = true;
+                }
+                if (accConnected && gyroConnected) break;
             }
         }
 
         // Closes the connect socket and causes the thread to finish.
         public void cancel() {
             try {
-                mmServerSocket.close();
+                accServerSocket.close();
+                gyroServerSocket.close();
             } catch (IOException e) {
                 Log.e(TAG, "Could not close the connect socket", e);
             }
