@@ -1,11 +1,9 @@
 package com.example.imu_data_collection_smartphone;
 
-import androidx.annotation.RequiresApi;
-import androidx.appcompat.app.AppCompatActivity;
-import androidx.core.app.ActivityCompat;
-
 import android.Manifest;
 import android.annotation.SuppressLint;
+import android.annotation.TargetApi;
+import android.app.Activity;
 import android.bluetooth.BluetoothAdapter;
 import android.bluetooth.BluetoothDevice;
 import android.bluetooth.BluetoothServerSocket;
@@ -23,7 +21,7 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.UUID;
 
-public class MainActivity extends AppCompatActivity {
+public class MainActivity extends Activity {
     final private String TAG = MainActivity.class.getName();
     final static private String ACC_UUID = "680ac785-9ed1-42cd-bdf0-76cf6b708f3b";
     final static private String GYRO_UUID = "e0740e55-4d73-4e97-b0fb-90afc0ebb980";
@@ -40,7 +38,7 @@ public class MainActivity extends AppCompatActivity {
 //    private ArrayList<LineGraphSeries<DataPoint>> acc_display_buf = new ArrayList<>();
 //    private ArrayList<LineGraphSeries<DataPoint>> gyro_display_buf = new ArrayList<>();
 
-    @RequiresApi(api = Build.VERSION_CODES.S)
+    @TargetApi(Build.VERSION_CODES.S)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
@@ -58,19 +56,18 @@ public class MainActivity extends AppCompatActivity {
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
         }
-        if (ActivityCompat.checkSelfPermission(this, android.Manifest.permission.BLUETOOTH_CONNECT)
+        if (checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
                 != PackageManager.PERMISSION_GRANTED) {
             Log.d(TAG, "onCreate: Request Permission");
-            ActivityCompat.requestPermissions(MainActivity.this,
-                    new String[]{
-                            android.Manifest.permission.BLUETOOTH,
-                            android.Manifest.permission.BLUETOOTH_ADMIN,
-                            android.Manifest.permission.BLUETOOTH_CONNECT,
-                            android.Manifest.permission.WAKE_LOCK,
-                            android.Manifest.permission.FOREGROUND_SERVICE,
-                            android.Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION},
-                    2);
+            requestPermissions(new String[]{
+                    android.Manifest.permission.BLUETOOTH,
+                    android.Manifest.permission.BLUETOOTH_ADMIN,
+                    android.Manifest.permission.BLUETOOTH_CONNECT,
+                    android.Manifest.permission.WAKE_LOCK,
+                    android.Manifest.permission.FOREGROUND_SERVICE,
+                    android.Manifest.permission.ACCESS_FINE_LOCATION,
+                    Manifest.permission.ACCESS_COARSE_LOCATION},
+            2);
         }
         Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
         Log.d(TAG, "onCreate: pairedDevices length: " + pairedDevices.size());
