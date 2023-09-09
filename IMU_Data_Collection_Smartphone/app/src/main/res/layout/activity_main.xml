@@ -13,10 +13,10 @@
         android:text="Acc"
         tools:ignore="HardcodedText" />
 
-<!--    <com.jjoe64.graphview.GraphView-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="150dp"-->
-<!--        android:id="@+id/acc_graph" />-->
+    <com.jjoe64.graphview.GraphView
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:id="@+id/acc_graph" />
 
     <TextView
         android:layout_width="match_parent"
@@ -24,8 +24,8 @@
         android:text="Gyro"
         tools:ignore="HardcodedText" />
 
-<!--    <com.jjoe64.graphview.GraphView-->
-<!--        android:layout_width="match_parent"-->
-<!--        android:layout_height="150dp"-->
-<!--        android:id="@+id/gyro_graph" />-->
+    <com.jjoe64.graphview.GraphView
+        android:layout_width="match_parent"
+        android:layout_height="150dp"
+        android:id="@+id/gyro_graph" />
 </android.widget.LinearLayout>
