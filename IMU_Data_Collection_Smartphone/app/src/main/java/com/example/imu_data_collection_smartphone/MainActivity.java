@@ -78,7 +78,8 @@ public class MainActivity extends AppCompatActivity {
             for (BluetoothDevice device : pairedDevices) {
                 String deviceName = device.getName();
                 String deviceHardwareAddress = device.getAddress(); // MAC address
-                Log.d(TAG, "onCreate: Bluetooth device name: " + deviceName);
+                Log.d(TAG, "onCreate: Bluetooth device name: " + deviceName + " MAC Address: "
+                        + deviceHardwareAddress);
             }
         }
         
@@ -86,6 +87,7 @@ public class MainActivity extends AppCompatActivity {
         acceptThread.start();
     }
 
+    private ConnectedThread connectedThread;
     private class AcceptThread extends Thread {
         private final BluetoothServerSocket mmServerSocket;
 
@@ -122,6 +124,8 @@ public class MainActivity extends AppCompatActivity {
                     // the connection in a separate thread.
                     Log.d(TAG, "run: bluetooth connected SUCCESSFULLY!");
 //                    manageMyConnectedSocket(socket);
+                    connectedThread = new ConnectedThread(socket);
+                    connectedThread.start();
                     try {
                         mmServerSocket.close();
                     } catch (IOException e) {
