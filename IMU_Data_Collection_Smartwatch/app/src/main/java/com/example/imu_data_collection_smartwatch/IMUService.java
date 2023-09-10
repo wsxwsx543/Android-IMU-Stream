@@ -55,6 +55,11 @@ public class IMUService extends Service implements SensorEventListener {
     private SensorManager sensorManager;
     private Sensor linearAccelerometer, gyroscope;
 
+    @Override
+    public boolean stopService(Intent name) {
+        return super.stopService(name);
+    }
+
     @SuppressLint("MissingPermission")
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
@@ -111,38 +116,25 @@ public class IMUService extends Service implements SensorEventListener {
         return super.onStartCommand(intent, flags, startId);
     }
 
-//    private SensorData sensorData = new SensorData();
-    private final Object changeLock = new Object();
     // x, y, z, timestamp, name, index
     int cnt = 0;
     BlockingQueue<float[]> accBuffer = new LinkedBlockingQueue<>(1024);
     BlockingQueue<float[]> gyroBuffer = new LinkedBlockingQueue<>(1024);
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
-//        synchronized (changeLock) {
-//            sensorData.timestamp = sensorEvent.timestamp;
-            float[] sensorData = new float[6];
-            sensorData[0] = sensorEvent.values[0];
-            sensorData[1] = sensorEvent.values[1];
-            sensorData[2] = sensorEvent.values[2];
-            sensorData[3] = sensorEvent.timestamp;
-            sensorData[5] = cnt++;
-//            Log.d(TAG, "run: Receive updated sensor data:"
-//                + " index: " + sensorData[5]
-//                + " name: " + sensorData[4]
-//                + " timestamp: " + sensorData[3]
-//                + " x: " + sensorData[0]
-//                + " y: " + sensorData[1]
-//                + " z: " + sensorData[2]);
-            if (sensorEvent.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
-                sensorData[4] = 0;
-                gyroBuffer.add(sensorData);
-            } else if (sensorEvent.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION) {
-                sensorData[4] = 1;
-                accBuffer.add(sensorData);
-            }
-//            Log.d(TAG, "onSensorChanged: write to socket");
-//        }
+        float[] sensorData = new float[6];
+        sensorData[0] = sensorEvent.values[0];
+        sensorData[1] = sensorEvent.values[1];
+        sensorData[2] = sensorEvent.values[2];
+        sensorData[3] = sensorEvent.timestamp;
+        sensorData[5] = cnt++;
+        if (sensorEvent.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
+            sensorData[4] = 0;
+            gyroBuffer.add(sensorData);
+        } else if (sensorEvent.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION) {
+            sensorData[4] = 1;
+            accBuffer.add(sensorData);
+        }
     }
 
     private Thread sendingAccThread;
@@ -188,6 +180,14 @@ public class IMUService extends Service implements SensorEventListener {
     @Override
     public void onAccuracyChanged(Sensor sensor, int i) {
         Log.d(TAG, "accuracy changed");
+    }
+
+    @Override
+    public void onDestroy() {
+        super.onDestroy();
+        connectedThreadAcc.cancel();
+        connectedThreadGyro.cancel();
+        sensorManager.unregisterListener(this);
     }
 
     private class ConnectThread extends Thread {
