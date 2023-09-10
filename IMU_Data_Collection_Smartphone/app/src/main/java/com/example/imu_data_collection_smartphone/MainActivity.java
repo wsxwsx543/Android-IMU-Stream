@@ -26,13 +26,18 @@ import android.media.Image;
 import android.media.ImageReader;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.Environment;
 import android.support.annotation.NonNull;
+import android.support.annotation.RequiresApi;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.content.ContextCompat;
 import android.util.Log;
 import android.util.Range;
 import android.view.Surface;
 import android.view.TextureView;
+import android.view.View;
+import android.widget.Button;
+import android.widget.Toast;
 
 
 import com.jjoe64.graphview.GraphView;
@@ -41,10 +46,19 @@ import com.jjoe64.graphview.Viewport;
 import com.jjoe64.graphview.series.DataPoint;
 import com.jjoe64.graphview.series.LineGraphSeries;
 
+import org.json.JSONException;
+import org.json.JSONObject;
+
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileWriter;
 import java.io.IOException;
+import java.io.Writer;
 import java.nio.ByteBuffer;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Date;
 import java.util.Set;
 import java.util.UUID;
 
@@ -65,16 +79,25 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
             Color.argb(255, 225, 225, 0), // yellow
             Color.argb(255, 150, 150, 150)};
 
-    private static ArrayList<LineGraphSeries<DataPoint>> accDisplayBuf = new ArrayList<>();
-    private static ArrayList<ArrayList<DataPoint>> accResultBuf = new ArrayList<>();
-    private static ArrayList<LineGraphSeries<DataPoint>> gyroDisplayBuf = new ArrayList<>();
-    private static ArrayList<ArrayList<DataPoint>> gyroResultBuf = new ArrayList<>();
+    private static final Object gyroResLock = new Object();
+    private static final Object accResLock = new Object();
+
+    private static final ArrayList<LineGraphSeries<DataPoint>> accDisplayBuf = new ArrayList<>();
+    private static final ArrayList<ArrayList<Float>> accResultBuf = new ArrayList<>();
+    private final ArrayList<Float> accTimestamp = new ArrayList<>();
+    private final ArrayList<Integer> accIdx = new ArrayList<>();
+    private static final ArrayList<LineGraphSeries<DataPoint>> gyroDisplayBuf = new ArrayList<>();
+    private static final ArrayList<ArrayList<Float>> gyroResultBuf = new ArrayList<>();
+    private final ArrayList<Float> gyroTimestamp = new ArrayList<>();
+    private final ArrayList<Integer> gyroIdx = new ArrayList<>();
     private GraphView accGraph, gyroGraph;
+    private String fName = null;
 
     private void init() {
         initGraphs();
-        initCamera();
         initBluetooth();
+        initCamera();
+        initButton();
     }
 
     private void initGraphs() {
@@ -151,18 +174,20 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
             Intent enableBtIntent = new Intent(BluetoothAdapter.ACTION_REQUEST_ENABLE);
             startActivityForResult(enableBtIntent, REQUEST_ENABLE_BT);
         }
-        if (checkSelfPermission(android.Manifest.permission.BLUETOOTH_CONNECT)
+        if (checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 != PackageManager.PERMISSION_GRANTED) {
             Log.d(TAG, "onCreate: Request Permission");
             requestPermissions(new String[]{
-                            android.Manifest.permission.BLUETOOTH,
-                            android.Manifest.permission.BLUETOOTH_ADMIN,
-                            android.Manifest.permission.BLUETOOTH_CONNECT,
-                            android.Manifest.permission.WAKE_LOCK,
-                            android.Manifest.permission.CAMERA,
-                            android.Manifest.permission.FOREGROUND_SERVICE,
-                            android.Manifest.permission.ACCESS_FINE_LOCATION,
-                            android.Manifest.permission.ACCESS_COARSE_LOCATION},
+                            Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                            Manifest.permission.READ_EXTERNAL_STORAGE,
+                            Manifest.permission.BLUETOOTH,
+                            Manifest.permission.BLUETOOTH_ADMIN,
+                            Manifest.permission.BLUETOOTH_CONNECT,
+                            Manifest.permission.WAKE_LOCK,
+                            Manifest.permission.CAMERA,
+                            Manifest.permission.FOREGROUND_SERVICE,
+                            Manifest.permission.ACCESS_FINE_LOCATION,
+                            Manifest.permission.ACCESS_COARSE_LOCATION},
                     2);
         }
         Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
@@ -181,6 +206,47 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
         acceptThread.start();
     }
 
+    @SuppressLint("SetTextI18n")
+    private void initButton() {
+        recButton.setOnClickListener(v -> {
+            if (!isRecording) { // start
+                // clear buffer first, then make isRecording be true to accept new data
+                synchronized (accResLock) {
+                    accResultBuf.get(0).clear();
+                    accResultBuf.get(1).clear();
+                    accResultBuf.get(2).clear();
+                    accTimestamp.clear();
+                    accIdx.clear();
+                }
+                synchronized (gyroResLock) {
+                    gyroResultBuf.get(0).clear();
+                    gyroResultBuf.get(1).clear();
+                    gyroResultBuf.get(2).clear();
+                    gyroTimestamp.clear();
+                    gyroIdx.clear();
+                }
+                beginAccTime = null;
+                beginGyroTime = null;
+                @SuppressLint("SimpleDateFormat")
+                SimpleDateFormat simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd-HH_mm_ssZ");
+                fName = simpleDateFormat.format(new Date());
+                recButton.setText("Stop Rec");
+                isRecording = true;
+            } else { // stop
+                // change is recording first to stop accept new data
+                isRecording = false;
+                try {
+                    saveToFile();
+                    Toast.makeText(this, "Save file successfully", Toast.LENGTH_SHORT).show();
+                } catch (JSONException | IOException e) {
+                    Log.d(TAG, "initButton: Save file failed");
+                    e.printStackTrace();
+                }
+                recButton.setText("Start Rec");
+            }
+        });
+    }
+
     TextureView textureView;
     TextureView.SurfaceTextureListener surfaceTextureListener;
     CameraManager cameraManager;
@@ -194,6 +260,8 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
     Surface imageReaderSurface;
     CaptureRequest request;
 
+    private boolean isRecording = false;
+    private Button recButton;
 
     @TargetApi(Build.VERSION_CODES.S)
     @Override
@@ -204,7 +272,7 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
         accGraph = findViewById(R.id.acc_graph);
         gyroGraph = findViewById(R.id.gyro_graph);
         textureView = findViewById(R.id.texture_view);
-
+        recButton = findViewById(R.id.rec_button);
         init();
     }
 
@@ -304,18 +372,29 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
     public static final float GYRO = 0.f, ACC = 1.f;
 
     private ConnectedThread accConnectedThread, gyroConnectedThread;
-
-    final private static Object accViewLock = new Object();
-    final private static Object gyroViewLock = new Object();
+    private Float beginAccTime = null, beginGyroTime = null;
 
     @Override
     public void accListener(float[] sensorData) {
+        DataPoint x, y, z;
+        x = new DataPoint((int) (sensorData[INDEX] / 2), sensorData[X]);
+        y = new DataPoint((int) (sensorData[INDEX] / 2), sensorData[Y]);
+        z = new DataPoint((int) (sensorData[INDEX] / 2), sensorData[Z]);
+        synchronized (accResLock) {
+            if (isRecording) {
+                accResultBuf.get(0).add(sensorData[X]);
+                accResultBuf.get(1).add(sensorData[Y]);
+                accResultBuf.get(2).add(sensorData[Z]);
+                if (beginAccTime == null) {
+                    beginAccTime = sensorData[TIMESTAMP];
+                    accTimestamp.add(0.f);
+                } else {
+                    accTimestamp.add((sensorData[TIMESTAMP] - beginAccTime) / 1000000);
+                }
+                accIdx.add((int) (sensorData[INDEX] / 2));
+            }
+        }
         runOnUiThread(() -> {
-            DataPoint x, y, z;
-            x = new DataPoint(sensorData[INDEX] / 2, sensorData[X]);
-            y = new DataPoint(sensorData[INDEX] / 2, sensorData[Y]);
-            z = new DataPoint(sensorData[INDEX] / 2, sensorData[Z]);
-
             accDisplayBuf.get(0).appendData(x, true, MOTION_PREVIEW_SIZE);
             accDisplayBuf.get(1).appendData(y, true, MOTION_PREVIEW_SIZE);
             accDisplayBuf.get(2).appendData(z, true, MOTION_PREVIEW_SIZE);
@@ -324,16 +403,65 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
 
     @Override
     public void gyroListener(float[] sensorData) {
+        DataPoint x, y, z;
+        x = new DataPoint((int) (sensorData[INDEX] / 2), sensorData[X]);
+        y = new DataPoint((int) (sensorData[INDEX] / 2), sensorData[Y]);
+        z = new DataPoint((int) (sensorData[INDEX] / 2), sensorData[Z]);
+        synchronized (gyroResLock) {
+            if (isRecording) {
+                gyroResultBuf.get(0).add(sensorData[X]);
+                gyroResultBuf.get(1).add(sensorData[Y]);
+                gyroResultBuf.get(2).add(sensorData[Z]);
+                if (beginGyroTime == null) {
+                    beginGyroTime = sensorData[TIMESTAMP];
+                    gyroTimestamp.add(0.f);
+                } else {
+                    gyroTimestamp.add((sensorData[TIMESTAMP] - beginGyroTime) / 1000000);
+                }
+                gyroIdx.add((int) (sensorData[INDEX] / 2));
+            }
+        }
         runOnUiThread(() -> {
-            DataPoint x, y, z;
-            x = new DataPoint(sensorData[INDEX] / 2, sensorData[X]);
-            y = new DataPoint(sensorData[INDEX] / 2, sensorData[Y]);
-            z = new DataPoint(sensorData[INDEX] / 2, sensorData[Z]);
-
             gyroDisplayBuf.get(0).appendData(x, true, MOTION_PREVIEW_SIZE);
             gyroDisplayBuf.get(1).appendData(y, true, MOTION_PREVIEW_SIZE);
             gyroDisplayBuf.get(2).appendData(z, true, MOTION_PREVIEW_SIZE);
         });
+    }
+
+    private void saveToFile() throws JSONException, IOException {
+        JSONObject accJsonObj = new JSONObject();
+        accJsonObj.put("timestamp", accTimestamp);
+        accJsonObj.put("x", accResultBuf.get(0));
+        accJsonObj.put("y", accResultBuf.get(1));
+        accJsonObj.put("z", accResultBuf.get(2));
+        accJsonObj.put("idx", accIdx);
+
+        JSONObject gyroJsonObj = new JSONObject();
+        gyroJsonObj.put("timestamp", gyroTimestamp);
+        gyroJsonObj.put("x", gyroResultBuf.get(0));
+        gyroJsonObj.put("y", gyroResultBuf.get(1));
+        gyroJsonObj.put("z", gyroResultBuf.get(2));
+        gyroJsonObj.put("idx", gyroIdx);
+
+        JSONObject imuJsonObj = new JSONObject();
+        imuJsonObj.put("acc", accJsonObj);
+        imuJsonObj.put("gyro", gyroJsonObj);
+
+
+        File dir = new File(Environment.getExternalStorageDirectory(), "IMU-Stream/");
+        if (!dir.exists()) {
+            boolean r = dir.mkdirs();
+            Log.d(TAG, r ? "True" : "False");
+        }
+        File currDataDir = new File(dir.getAbsolutePath(), fName + "/");
+        if (!currDataDir.exists()) {
+            boolean r = currDataDir.mkdir();
+            Log.d(TAG, r ? "True" : "False");
+        }
+        File file = new File(currDataDir.getAbsolutePath() + "/" + fName + ".json");
+        Writer output = new BufferedWriter(new FileWriter(file));
+        output.write(imuJsonObj.toString());
+        output.close();
     }
 
     private class AcceptThread extends Thread {
