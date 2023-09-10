@@ -101,7 +101,7 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
     private GraphView accGraph, gyroGraph;
     private String fName = null;
 
-
+    // camera 2
     private TextureView mTextureView;
     private CameraManager mCameraManager;
     private CameraDevice mCameraDevice;
@@ -509,7 +509,7 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
         mMediaRecorder.setOutputFormat(MediaRecorder.OutputFormat.DEFAULT);//设置输出格式
         mMediaRecorder.setAudioEncoder(MediaRecorder.AudioEncoder.DEFAULT);//设置音频编码格式，请注意这里使用默认，实际app项目需要考虑兼容问题，应该选择AAC
         mMediaRecorder.setVideoEncoder(MediaRecorder.VideoEncoder.DEFAULT);//设置视频编码格式，请注意这里使用默认，实际app项目需要考虑兼容问题，应该选择H264
-        mMediaRecorder.setVideoEncodingBitRate(8 * 1024 * 1920);//设置比特率 一般是 1*分辨率 到 10*分辨率 之间波动。比特率越大视频越清晰但是视频文件也越大。
+        mMediaRecorder.setVideoEncodingBitRate(8 * 720 * 1280);//设置比特率 一般是 1*分辨率 到 10*分辨率 之间波动。比特率越大视频越清晰但是视频文件也越大。
         mMediaRecorder.setVideoFrameRate(30);//设置帧数 选择 30即可， 过大帧数也会让视频文件更大当然也会更流畅，但是没有多少实际提升。人眼极限也就30帧了。
         Size size = getMatchingSize2();
         mMediaRecorder.setVideoSize(size.getWidth(), size.getHeight());
@@ -588,6 +588,7 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
 
         }
         try {
+            assert mCameraManager != null;
             String[] cameraIdList = mCameraManager.getCameraIdList();   //获取当前设备的全部摄像头id集合
             if (cameraIdList.length == 0) {
                 Log.e(TAG, "selectCamera: cameraIdList length is 0");
@@ -669,27 +670,6 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
                 super.onCaptureStarted(session, request, timestamp, frameNumber);
             }
         };
-//        mSessionCaptureCallback = new CameraCaptureSession.CaptureCallback() {
-//            @Override
-//            public void onCaptureStarted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, long timestamp, long frameNumber) {
-//                super.onCaptureStarted(session, request, timestamp, frameNumber);
-//            }
-//
-//            @Override
-//            public void onCaptureProgressed(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull CaptureResult partialResult) {
-//                super.onCaptureProgressed(session, request, partialResult);
-//            }
-//
-//            @Override
-//            public void onCaptureCompleted(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull TotalCaptureResult result) {
-//                super.onCaptureCompleted(session, request, result);
-//            }
-//
-//            @Override
-//            public void onCaptureFailed(@NonNull CameraCaptureSession session, @NonNull CaptureRequest request, @NonNull CaptureFailure failure) {
-//                super.onCaptureFailed(session, request, failure);
-//            }
-//        };
     }
 
     /**
