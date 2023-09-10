@@ -71,7 +71,13 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
     private static ArrayList<ArrayList<DataPoint>> gyroResultBuf = new ArrayList<>();
     private GraphView accGraph, gyroGraph;
 
-    private void initUI() {
+    private void init() {
+        initGraphs();
+        initCamera();
+        initBluetooth();
+    }
+
+    private void initGraphs() {
         Viewport vp1 = accGraph.getViewport();
         vp1.setXAxisBoundsManual(true);
         vp1.setMinX(0);
@@ -97,34 +103,7 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
         }
     }
 
-    TextureView textureView;
-    TextureView.SurfaceTextureListener surfaceTextureListener;
-    CameraManager cameraManager;
-    CameraDevice.StateCallback cam_stateCallback;
-    CameraDevice opened_camera;
-    Surface texture_surface;
-    CameraCaptureSession.StateCallback cam_capture_session_stateCallback;
-    CameraCaptureSession.CaptureCallback still_capture_callback;
-    CameraCaptureSession cameraCaptureSession;
-    CaptureRequest.Builder requestBuilder;
-    CaptureRequest.Builder requestBuilder_image_reader;
-    ImageReader imageReader;
-    Surface imageReaderSurface;
-    Bitmap bitmap;
-    CaptureRequest request;
-    CaptureRequest takephoto_request;
-
-
-    @TargetApi(Build.VERSION_CODES.S)
-    @Override
-    protected void onCreate(Bundle savedInstanceState) {
-        super.onCreate(savedInstanceState);
-        setContentView(R.layout.activity_main);
-
-        accGraph = findViewById(R.id.acc_graph);
-        gyroGraph = findViewById(R.id.gyro_graph);
-        textureView = findViewById(R.id.texture_view);
-
+    private void initCamera() {
         surfaceTextureListener = new TextureView.SurfaceTextureListener() {
             @Override
             public void onSurfaceTextureAvailable(SurfaceTexture surface, int width, int height) {
@@ -156,9 +135,9 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
         }, null);
         //B3 配置：获取ImageReader的Surface
         imageReaderSurface = imageReader.getSurface();
+    }
 
-        initUI();
-
+    private void initBluetooth() {
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
         if (bluetoothAdapter == null) {
             Log.d(TAG, "onCreate: This device doesn't have bluetooth");
@@ -200,6 +179,33 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
 
         AcceptThread acceptThread = new AcceptThread();
         acceptThread.start();
+    }
+
+    TextureView textureView;
+    TextureView.SurfaceTextureListener surfaceTextureListener;
+    CameraManager cameraManager;
+    CameraDevice.StateCallback cam_stateCallback;
+    CameraDevice opened_camera;
+    Surface texture_surface;
+    CameraCaptureSession.StateCallback cam_capture_session_stateCallback;
+    CameraCaptureSession cameraCaptureSession;
+    CaptureRequest.Builder requestBuilder;
+    ImageReader imageReader;
+    Surface imageReaderSurface;
+    CaptureRequest request;
+
+
+    @TargetApi(Build.VERSION_CODES.S)
+    @Override
+    protected void onCreate(Bundle savedInstanceState) {
+        super.onCreate(savedInstanceState);
+        setContentView(R.layout.activity_main);
+
+        accGraph = findViewById(R.id.acc_graph);
+        gyroGraph = findViewById(R.id.gyro_graph);
+        textureView = findViewById(R.id.texture_view);
+
+        init();
     }
 
     @Override
