@@ -50,7 +50,7 @@ public class MainActivity extends Activity {
 
         startButton = findViewById(R.id.start_button);
         stopButton = findViewById(R.id.stop_button);
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_CONNECT)
+        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
                 != PackageManager.PERMISSION_GRANTED) {
             Log.d(TAG, "onCreate: Request Permission");
             ActivityCompat.requestPermissions(MainActivity.this,
@@ -58,6 +58,7 @@ public class MainActivity extends Activity {
                             Manifest.permission.BLUETOOTH,
                             Manifest.permission.BLUETOOTH_ADMIN,
                             Manifest.permission.BLUETOOTH_CONNECT,
+                            Manifest.permission.BLUETOOTH_SCAN,
                             Manifest.permission.WAKE_LOCK,
                             Manifest.permission.FOREGROUND_SERVICE,
                             Manifest.permission.ACCESS_FINE_LOCATION,
