@@ -19,6 +19,7 @@ import android.os.Build;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.View;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.TextView;
 
@@ -47,25 +48,28 @@ public class MainActivity extends Activity {
 
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
-
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
         startButton = findViewById(R.id.start_button);
         stopButton = findViewById(R.id.stop_button);
-        if (ActivityCompat.checkSelfPermission(this, Manifest.permission.BLUETOOTH_SCAN)
-                != PackageManager.PERMISSION_GRANTED) {
-            Log.d(TAG, "onCreate: Request Permission");
-            ActivityCompat.requestPermissions(MainActivity.this,
-                    new String[]{
-                            Manifest.permission.BLUETOOTH,
-                            Manifest.permission.BLUETOOTH_ADMIN,
-                            Manifest.permission.BLUETOOTH_CONNECT,
-                            Manifest.permission.BLUETOOTH_SCAN,
-                            Manifest.permission.WAKE_LOCK,
-                            Manifest.permission.FOREGROUND_SERVICE,
-                            Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION},
-                    2);
+        String[] permissions = new String[]{
+                Manifest.permission.BLUETOOTH,
+                Manifest.permission.BLUETOOTH_ADMIN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.WAKE_LOCK,
+                Manifest.permission.FOREGROUND_SERVICE,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION};
+        for (String permission : permissions) {
+            if (ActivityCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "onCreate: Request Permission");
+                ActivityCompat.requestPermissions(MainActivity.this,
+                        new String[]{
+                                permission
+                        },
+                        2);
+            }
         }
-
         startButton.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {

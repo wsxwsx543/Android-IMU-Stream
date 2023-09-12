@@ -122,6 +122,7 @@ public class IMUService extends Service implements SensorEventListener {
     BlockingQueue<float[]> gyroBuffer = new LinkedBlockingQueue<>(1024);
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
+        Log.d(TAG, "onSensorChanged: IMU changing");
         float[] sensorData = new float[6];
         sensorData[0] = sensorEvent.values[0];
         sensorData[1] = sensorEvent.values[1];

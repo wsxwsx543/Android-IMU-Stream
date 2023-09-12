@@ -43,6 +43,8 @@ import android.util.Size;
 import android.view.Surface;
 import android.view.TextureView;
 import android.view.View;
+import android.view.Window;
+import android.view.WindowManager;
 import android.widget.Button;
 import android.widget.Toast;
 
@@ -258,6 +260,7 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
+        getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         accGraph = findViewById(R.id.acc_graph);
         gyroGraph = findViewById(R.id.gyro_graph);
