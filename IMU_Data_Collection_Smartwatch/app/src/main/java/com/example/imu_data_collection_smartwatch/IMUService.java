@@ -17,6 +17,7 @@ import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.util.Log;
 
 import androidx.core.app.ActivityCompat;
@@ -70,7 +71,13 @@ public class IMUService extends Service implements SensorEventListener {
         } else {
             Log.d(TAG, "onCreate: bluetooth is available on this device");
         }
-        assert true;
+
+        PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+        PowerManager.WakeLock wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK,
+                "MyApp::MyWakelockTag");
+        wakeLock.acquire();
+
+
         Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
         Log.d(TAG, "onCreate: pairedDevices length: " + pairedDevices.size());
         BluetoothDevice discoverableDevice = null;
@@ -122,7 +129,7 @@ public class IMUService extends Service implements SensorEventListener {
     BlockingQueue<float[]> gyroBuffer = new LinkedBlockingQueue<>(1024);
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
-        Log.d(TAG, "onSensorChanged: IMU changing");
+        Log.d(TAG, "onSensorChanged: IMU changing " + cnt);
         float[] sensorData = new float[6];
         sensorData[0] = sensorEvent.values[0];
         sensorData[1] = sensorEvent.values[1];
@@ -186,8 +193,10 @@ public class IMUService extends Service implements SensorEventListener {
     @Override
     public void onDestroy() {
         super.onDestroy();
-        connectedThreadAcc.cancel();
-        connectedThreadGyro.cancel();
+        if (connectedThreadAcc != null)
+            connectedThreadAcc.cancel();
+        if (connectedThreadGyro != null)
+            connectedThreadGyro.cancel();
         sensorManager.unregisterListener(this);
     }
 

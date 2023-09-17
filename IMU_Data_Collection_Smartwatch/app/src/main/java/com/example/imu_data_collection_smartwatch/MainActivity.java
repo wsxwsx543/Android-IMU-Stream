@@ -17,6 +17,8 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.os.Build;
 import android.os.Bundle;
+import android.os.PowerManager;
+import android.support.wearable.activity.WearableActivity;
 import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
@@ -41,11 +43,11 @@ public class MainActivity extends Activity {
     private Button startButton, stopButton;
     private ActivityMainBinding binding;
 
+    @SuppressLint("WakelockTimeout")
     @RequiresApi(api = Build.VERSION_CODES.S)
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-
         binding = ActivityMainBinding.inflate(getLayoutInflater());
         setContentView(binding.getRoot());
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
