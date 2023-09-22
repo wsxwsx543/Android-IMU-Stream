@@ -61,7 +61,7 @@ public class IMUService extends Service implements SensorEventListener {
         return super.stopService(name);
     }
 
-    @SuppressLint("MissingPermission")
+    @SuppressLint({"MissingPermission", "WakelockTimeout"})
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         bluetoothAdapter = BluetoothAdapter.getDefaultAdapter();
@@ -129,7 +129,11 @@ public class IMUService extends Service implements SensorEventListener {
     BlockingQueue<float[]> gyroBuffer = new LinkedBlockingQueue<>(1024);
     @Override
     public void onSensorChanged(SensorEvent sensorEvent) {
-        Log.d(TAG, "onSensorChanged: IMU changing " + cnt);
+        Log.d(TAG, "onSensorChanged: IMU changing " + cnt
+                + " timestamp: " + sensorEvent.timestamp
+                + " type: " + sensorEvent.sensor.getType());
+        Log.d(TAG, "onSensorChanged: accBuffer size: " + accBuffer.size());
+        Log.d(TAG, "onSensorChanged: gyroBuffer size: " + gyroBuffer.size());
         float[] sensorData = new float[6];
         sensorData[0] = sensorEvent.values[0];
         sensorData[1] = sensorEvent.values[1];
@@ -138,11 +142,12 @@ public class IMUService extends Service implements SensorEventListener {
         sensorData[5] = cnt++;
         if (sensorEvent.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
             sensorData[4] = 0;
-            gyroBuffer.add(sensorData);
+//            gyroBuffer.add(sensorData);
         } else if (sensorEvent.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION) {
             sensorData[4] = 1;
-            accBuffer.add(sensorData);
+//            accBuffer.add(sensorData);
         }
+        MainActivity.udpClient.add2Buffer(sensorData);
     }
 
     private Thread sendingAccThread;
