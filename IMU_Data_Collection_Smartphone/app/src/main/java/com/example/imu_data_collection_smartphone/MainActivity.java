@@ -117,11 +117,20 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
     private String mCurrentSelectCamera;
     private Handler mChildHandler;
 
+    private UdpServer udpServer;
+
+    @RequiresApi(api = Build.VERSION_CODES.S)
     private void init() {
+        initPermission();
         initGraphs();
         initBluetooth();
         initCamera();
         initButton();
+        initUdpServer();
+    }
+
+    private void initUdpServer() {
+        udpServer = new UdpServer(this, this);
     }
 
     private void initCamera() {
@@ -188,7 +197,8 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
                             Manifest.permission.CAMERA,
                             Manifest.permission.FOREGROUND_SERVICE,
                             Manifest.permission.ACCESS_FINE_LOCATION,
-                            Manifest.permission.ACCESS_COARSE_LOCATION},
+                            Manifest.permission.ACCESS_COARSE_LOCATION
+                    },
                     2);
         }
         Set<BluetoothDevice> pairedDevices = bluetoothAdapter.getBondedDevices();
@@ -272,6 +282,10 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
     private static final int X = 0, Y = 1, Z = 2, TIMESTAMP = 3, NAME = 4, INDEX = 5;
     public static final float GYRO = 0.f, ACC = 1.f;
 
+    final static private int CLIENT_PORT = 1234;
+    final static private int SERVER_PORT = 12345;
+
+
     private ConnectedThread accConnectedThread, gyroConnectedThread;
     private Float beginAccTime = null, beginGyroTime = null;
 
@@ -281,7 +295,12 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
         x = new DataPoint((int) (sensorData[INDEX] / 2), sensorData[X]);
         y = new DataPoint((int) (sensorData[INDEX] / 2), sensorData[Y]);
         z = new DataPoint((int) (sensorData[INDEX] / 2), sensorData[Z]);
-        synchronized (accResLock) {
+        float idx = sensorData[5];
+        Log.d(TAG, "accListener: " + accResultBuf.get(0).size()
+                + " " + accResultBuf.get(1).size() + " " + accResultBuf.get(2).size()
+                + " " + accTimestamp.size()
+                + " " + idx);
+//        synchronized (accResLock) {
             if (isRecording) {
                 accResultBuf.get(0).add(sensorData[X]);
                 accResultBuf.get(1).add(sensorData[Y]);
@@ -294,7 +313,7 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
                 }
                 accIdx.add((int) (sensorData[INDEX] / 2));
             }
-        }
+//        }
         runOnUiThread(() -> {
             accDisplayBuf.get(0).appendData(x, true, MOTION_PREVIEW_SIZE);
             accDisplayBuf.get(1).appendData(y, true, MOTION_PREVIEW_SIZE);
@@ -308,7 +327,11 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
         x = new DataPoint((int) (sensorData[INDEX] / 2), sensorData[X]);
         y = new DataPoint((int) (sensorData[INDEX] / 2), sensorData[Y]);
         z = new DataPoint((int) (sensorData[INDEX] / 2), sensorData[Z]);
-        synchronized (gyroResLock) {
+        Log.d(TAG, "gyroListener: " + gyroResultBuf.get(0).size()
+                + " " + gyroResultBuf.get(1).size() + " " + gyroResultBuf.get(2).size()
+                + " " + gyroTimestamp.size()
+                + " " + sensorData[5]);
+//        synchronized (gyroResLock) {
             if (isRecording) {
                 gyroResultBuf.get(0).add(sensorData[X]);
                 gyroResultBuf.get(1).add(sensorData[Y]);
@@ -321,7 +344,7 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
                 }
                 gyroIdx.add((int) (sensorData[INDEX] / 2));
             }
-        }
+//        }
         runOnUiThread(() -> {
             gyroDisplayBuf.get(0).appendData(x, true, MOTION_PREVIEW_SIZE);
             gyroDisplayBuf.get(1).appendData(y, true, MOTION_PREVIEW_SIZE);
@@ -329,8 +352,41 @@ public class MainActivity extends Activity implements AccListener, GyroListener 
         });
     }
 
+    @RequiresApi(api = Build.VERSION_CODES.S)
+    private void initPermission () {
+        String[] permissions = new String[]{
+                Manifest.permission.BLUETOOTH,
+                Manifest.permission.BLUETOOTH_ADMIN,
+                Manifest.permission.BLUETOOTH_CONNECT,
+                Manifest.permission.BLUETOOTH_SCAN,
+                Manifest.permission.WAKE_LOCK,
+                Manifest.permission.RECORD_AUDIO,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.READ_EXTERNAL_STORAGE,
+                Manifest.permission.FOREGROUND_SERVICE,
+                Manifest.permission.ACCESS_FINE_LOCATION,
+                Manifest.permission.ACCESS_COARSE_LOCATION,
+                Manifest.permission.INTERNET,
+                Manifest.permission.CAMERA,
+                Manifest.permission.ACCESS_WIFI_STATE
+        };
+        for (String permission : permissions) {
+            if (ActivityCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
+                Log.d(TAG, "onCreate: Request Permission");
+                ActivityCompat.requestPermissions(MainActivity.this,
+                        new String[]{
+                                permission
+                        },
+                        2);
+            }
+        }
+    }
+
     private void saveToFile() throws JSONException, IOException {
         JSONObject accJsonObj = new JSONObject();
+        Log.d(TAG, "saveToFile acc: " + accTimestamp.size() + " "
+                + accResultBuf.get(0).size() + " " + accResultBuf.get(1).size() + " "
+                + accResultBuf.get(2).size());
         accJsonObj.put("timestamp", accTimestamp);
         accJsonObj.put("x", accResultBuf.get(0));
         accJsonObj.put("y", accResultBuf.get(1));
