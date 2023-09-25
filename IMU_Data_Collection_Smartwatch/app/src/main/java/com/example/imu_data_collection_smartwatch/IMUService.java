@@ -104,7 +104,7 @@ public class IMUService extends Service implements SensorEventListener {
         sendingGyroThread.start();
 
         sensorManager = (SensorManager) getSystemService(Context.SENSOR_SERVICE);
-        linearAccelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_LINEAR_ACCELERATION);
+        linearAccelerometer = sensorManager.getDefaultSensor(Sensor.TYPE_ACCELEROMETER);
         gyroscope = sensorManager.getDefaultSensor(Sensor.TYPE_GYROSCOPE);
 
         sensorManager.registerListener(this, linearAccelerometer, SensorManager.SENSOR_DELAY_GAME);
@@ -143,7 +143,7 @@ public class IMUService extends Service implements SensorEventListener {
         if (sensorEvent.sensor.getType() == Sensor.TYPE_GYROSCOPE) {
             sensorData[4] = 0;
 //            gyroBuffer.add(sensorData);
-        } else if (sensorEvent.sensor.getType() == Sensor.TYPE_LINEAR_ACCELERATION) {
+        } else if (sensorEvent.sensor.getType() == Sensor.TYPE_ACCELEROMETER) {
             sensorData[4] = 1;
 //            accBuffer.add(sensorData);
         }
