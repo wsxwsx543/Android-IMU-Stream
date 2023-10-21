@@ -21,13 +21,14 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Start"
-            android:id="@+id/start_button"/>
+            android:id="@+id/button"/>
 
-        <Button
-            android:id="@+id/stop_button"
+        <CheckBox
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:text="Stop" />
+            android:text="save local"
+            android:id="@+id/local_checkbox"/>
+
 
         <EditText
             android:id="@+id/dest_ip"

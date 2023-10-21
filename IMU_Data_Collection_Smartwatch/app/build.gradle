@@ -7,8 +7,8 @@ android {
 
     defaultConfig {
         applicationId "com.example.imu_data_collection_smartwatch"
-        minSdk 30
-        targetSdk 33
+        minSdk 26
+        targetSdk 29
         versionCode 1
         versionName "1.0"
 

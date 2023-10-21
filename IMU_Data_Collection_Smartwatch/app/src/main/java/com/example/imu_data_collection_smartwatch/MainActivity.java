@@ -23,6 +23,7 @@ import android.util.Log;
 import android.view.View;
 import android.view.WindowManager;
 import android.widget.Button;
+import android.widget.CheckBox;
 import android.widget.EditText;
 import android.widget.TextView;
 
@@ -43,7 +44,9 @@ public class MainActivity extends Activity {
 
     private final String TAG = "MainActivity";
 
-    private Button startButton, stopButton;
+    private boolean isStarting = false;
+    public static boolean saveLocal = false;
+    private Button button;
     private ActivityMainBinding binding;
     private String ip;
     public static UdpClient udpClient = null;
@@ -58,9 +61,9 @@ public class MainActivity extends Activity {
         getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
 
         EditText editText = findViewById(R.id.dest_ip);
+        CheckBox checkBox = findViewById(R.id.local_checkbox);
 
-        startButton = findViewById(R.id.start_button);
-        stopButton = findViewById(R.id.stop_button);
+        button = findViewById(R.id.button);
         String[] permissions = new String[]{
                 Manifest.permission.BLUETOOTH,
                 Manifest.permission.BLUETOOTH_ADMIN,
@@ -71,7 +74,9 @@ public class MainActivity extends Activity {
                 Manifest.permission.ACCESS_FINE_LOCATION,
                 Manifest.permission.ACCESS_COARSE_LOCATION,
                 Manifest.permission.INTERNET,
-                Manifest.permission.ACCESS_WIFI_STATE
+                Manifest.permission.ACCESS_WIFI_STATE,
+                Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                Manifest.permission.READ_EXTERNAL_STORAGE
         };
         for (String permission : permissions) {
             if (ActivityCompat.checkSelfPermission(this, permission) != PackageManager.PERMISSION_GRANTED) {
@@ -83,24 +88,31 @@ public class MainActivity extends Activity {
                         2);
             }
         }
-        startButton.setOnClickListener(new View.OnClickListener() {
+        button.setOnClickListener(new View.OnClickListener() {
             @Override
             public void onClick(View view) {
                 Intent serviceIntent = new Intent(MainActivity.this, IMUService.class);
-                try {
-                    udpClient = new UdpClient(MainActivity.this, editText.getText().toString());
-                } catch (SocketException | UnknownHostException e) {
-                    e.printStackTrace();
+                saveLocal = checkBox.isChecked();
+                if (!isStarting) {
+                    if (!saveLocal) {
+                        try {
+                            udpClient = new UdpClient(MainActivity.this, editText.getText().toString());
+                        } catch (SocketException | UnknownHostException e) {
+                            e.printStackTrace();
+                        }
+                    } else {
+                        udpClient = null;
+                    }
+                    startForegroundService(serviceIntent);
+                    button.setText("STOP");
+                } else {
+                    if (!saveLocal) {
+                        if (udpClient != null) udpClient.close();
+                    }
+                    stopService(serviceIntent);
+                    button.setText("START");
                 }
-                startForegroundService(serviceIntent);
-            }
-        });
-        stopButton.setOnClickListener(new View.OnClickListener() {
-            @Override
-            public void onClick(View view) {
-                Intent serviceIntent = new Intent(MainActivity.this, IMUService.class);
-                if (udpClient != null) udpClient.close();
-                stopService(serviceIntent);
+                isStarting = !isStarting;
             }
         });
     }
